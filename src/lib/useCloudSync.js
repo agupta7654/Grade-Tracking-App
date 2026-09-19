@@ -3,26 +3,10 @@ import { supabase, supabaseEnabled } from './supabase';
 
 const TABLE = 'tally_data';
 
-// Finishes a magic-link sign-in if we just got redirected back with ?code=...,
-// then strips it from the address bar without touching the #/... route hash.
-function useAuthRedirect() {
-  useEffect(() => {
-    if (!supabaseEnabled) return;
-    const url = new URL(window.location.href);
-    if (!url.searchParams.has('code')) return;
-    supabase.auth.exchangeCodeForSession(window.location.href).finally(() => {
-      url.searchParams.delete('code');
-      window.history.replaceState({}, '', url.pathname + url.hash);
-    });
-  }, []);
-}
-
 export function useCloudSync({ data, updatedAt, adoptRemote }) {
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState(supabaseEnabled ? 'signedout' : 'disabled');
   const reconciled = useRef(false);
-
-  useAuthRedirect();
 
   useEffect(() => {
     if (!supabaseEnabled) return;
@@ -105,13 +89,15 @@ export function useCloudSync({ data, updatedAt, adoptRemote }) {
 
   const signIn = async (email) => {
     if (!supabaseEnabled) return { error: new Error('Supabase is not configured for this deploy.') };
-    return supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/` },
-    });
+    return supabase.auth.signInWithOtp({ email });
+  };
+
+  const verifyCode = async (email, token) => {
+    if (!supabaseEnabled) return { error: new Error('Supabase is not configured for this deploy.') };
+    return supabase.auth.verifyOtp({ email, token, type: 'email' });
   };
 
   const signOut = () => supabase?.auth.signOut();
 
-  return { enabled: supabaseEnabled, user, status, signIn, signOut };
+  return { enabled: supabaseEnabled, user, status, signIn, verifyCode, signOut };
 }

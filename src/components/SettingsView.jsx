@@ -5,7 +5,9 @@ import TopBar from './TopBar';
 function SyncSection({ sync }) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [code, setCode] = useState('');
   const [err, setErr] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   if (!sync.enabled) {
     return (
@@ -39,14 +41,56 @@ function SyncSection({ sync }) {
     else setSent(true);
   };
 
+  const verify = async (e) => {
+    e.preventDefault();
+    setErr('');
+    setVerifying(true);
+    const { error } = await sync.verifyCode(email.trim(), code.trim());
+    setVerifying(false);
+    if (error) setErr(error.message);
+    // On success, sign-in state updates on its own and this section re-renders.
+  };
+
   return (
     <section className="block">
       <h2 className="subhead">Sync across devices</h2>
       <p>Sign in with your email once on your phone and once on your laptop, and this data stays in sync between them.</p>
       {sent ? (
-        <p className="note" role="status">
-          Check {email} for a sign-in link, and open it on this device.
-        </p>
+        <form className="stack" onSubmit={verify}>
+          <p className="note" role="status">
+            We sent a 6-digit code to {email}. Enter it below.
+          </p>
+          <input
+            className="import-box"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+            placeholder="123456"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            aria-label="6-digit code"
+          />
+          <button className="btn primary" type="submit" disabled={verifying}>
+            {verifying ? 'Checking…' : 'Verify'}
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => {
+              setSent(false);
+              setCode('');
+              setErr('');
+            }}
+          >
+            Use a different email
+          </button>
+          {err && (
+            <p className="note" role="status">
+              {err}
+            </p>
+          )}
+        </form>
       ) : (
         <form className="stack" onSubmit={send}>
           <input
@@ -59,7 +103,7 @@ function SyncSection({ sync }) {
             aria-label="Email address"
           />
           <button className="btn primary" type="submit">
-            Send sign-in link
+            Send sign-in code
           </button>
           {err && (
             <p className="note" role="status">

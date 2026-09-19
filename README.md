@@ -7,37 +7,29 @@ A phone-friendly grade tracker. Import a syllabus, enter your scores, and see yo
 2. In Netlify: Add new site, Import from GitHub, pick the repo. The settings are read from `netlify.toml` (build: `npm run build`, publish: `dist`).
 3. Open the site on your phone, then Share > Add to Home Screen (iPhone) or menu > Install app (Android).
 
-## Syncing between devices (Supabase)
-Data always saves to the device it's on first (so the app still works offline). If you add Supabase, signing in on
-two devices with the same email keeps them in sync too.
+## Syncing between devices
+Data always saves to the device it's on first (so the app still works offline). It also gets sent to a small
+built-in Netlify Function, so you can pull the same data down on another device — no account or setup beyond
+deploying the site.
 
-1. Create a free project at [supabase.com](https://supabase.com).
-2. In the Supabase dashboard: **SQL Editor** → New query → paste in `supabase/schema.sql` → Run. This creates the
-   table that stores everyone's data, one row per user, locked down so each person can only see their own row.
-3. In **Authentication → Providers**, make sure **Email** is enabled. In **Authentication → URL Configuration**, add
-   your Netlify site URL (e.g. `https://your-site.netlify.app`) to both "Site URL" and "Redirect URLs" — otherwise
-   the sign-in link will bounce.
-4. In **Project Settings → API**, copy the **Project URL** and the **anon public** key.
-5. In Netlify: **Site configuration → Environment variables**, add:
-   - `VITE_SUPABASE_URL` = your Project URL
-   - `VITE_SUPABASE_ANON_KEY` = your anon public key
-   Then trigger a new deploy (env vars only take effect on the next build).
-6. On the site, open **Settings → Sync across devices**, enter your email, and open the link it sends you. Do the
-   same on your other device with the same email — they'll sync automatically after that.
-
-For local development, copy `.env.example` to `.env` and fill in the same two values, then `npm run dev`.
+1. Deploy the site as usual (see above). That's it — the sync function deploys automatically with everything else.
+2. Open the site and go to **Settings**. You'll see a code like `AB3DE-F7GH2`, unique to this device.
+3. On your other device, open the site, go to Settings, and type that same code into the "Setting up a new device?"
+   box, then tap **Link this device**. The two devices now share the same code and sync automatically after that.
 
 Notes:
-- The anon key is safe to expose in client code — it's the row-level-security policies in `schema.sql` that keep
-  each person's data private, not secrecy of the key.
-- This is last-write-wins sync, checked on sign-in and whenever you switch back to the tab/app. It's built for one
-  person using two of their own devices, not simultaneous multi-user editing.
+- This is last-write-wins sync, checked when you open the app, switch back to the tab, and a second or so after any
+  edit. It's built for one person using two of their own devices, not simultaneous multi-user editing.
+- Anyone who has your code could read or overwrite that data — there's no password behind it, just the code itself.
+  The codes are random and long enough that guessing one isn't realistic, but don't post yours publicly.
 
 ## Run locally
 ```
 npm install
 npm run dev
 ```
+Note: `npm run dev` (Vite) won't serve the `/api/sync` function, so sync only works once deployed to Netlify. To
+test sync locally too, install the Netlify CLI and run `netlify dev` instead.
 
 ## Import format
 ```

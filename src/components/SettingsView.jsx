@@ -3,115 +3,53 @@ import { validBackup } from '../lib/store';
 import TopBar from './TopBar';
 
 function SyncSection({ sync }) {
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [code, setCode] = useState('');
-  const [err, setErr] = useState('');
-  const [verifying, setVerifying] = useState(false);
+  const [inputCode, setInputCode] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  if (!sync.enabled) {
-    return (
-      <section className="block">
-        <h2 className="subhead">Sync across devices</h2>
-        <p>Sync isn't set up for this deploy yet.</p>
-      </section>
-    );
-  }
-
-  if (sync.user) {
-    return (
-      <section className="block">
-        <h2 className="subhead">Sync across devices</h2>
-        <p>
-          Signed in as {sync.user.email}.{' '}
-          {sync.status === 'syncing' ? 'Syncing…' : sync.status === 'error' ? 'Could not reach the sync server.' : 'Up to date.'}
-        </p>
-        <button className="btn" onClick={sync.signOut}>
-          Sign out
-        </button>
-      </section>
-    );
-  }
-
-  const send = async (e) => {
-    e.preventDefault();
-    setErr('');
-    const { error } = await sync.signIn(email.trim());
-    if (error) setErr(error.message);
-    else setSent(true);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(sync.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked; the code is still selectable on screen */
+    }
   };
 
-  const verify = async (e) => {
+  const link = (e) => {
     e.preventDefault();
-    setErr('');
-    setVerifying(true);
-    const { error } = await sync.verifyCode(email.trim(), code.trim());
-    setVerifying(false);
-    if (error) setErr(error.message);
-    // On success, sign-in state updates on its own and this section re-renders.
+    if (inputCode.trim()) {
+      sync.linkCode(inputCode);
+      setInputCode('');
+    }
   };
 
   return (
     <section className="block">
       <h2 className="subhead">Sync across devices</h2>
-      <p>Sign in with your email once on your phone and once on your laptop, and this data stays in sync between them.</p>
-      {sent ? (
-        <form className="stack" onSubmit={verify}>
-          <p className="note" role="status">
-            We sent a 6-digit code to {email}. Enter it below.
-          </p>
-          <input
-            className="import-box"
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-            placeholder="123456"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            aria-label="6-digit code"
-          />
-          <button className="btn primary" type="submit" disabled={verifying}>
-            {verifying ? 'Checking…' : 'Verify'}
-          </button>
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              setSent(false);
-              setCode('');
-              setErr('');
-            }}
-          >
-            Use a different email
-          </button>
-          {err && (
-            <p className="note" role="status">
-              {err}
-            </p>
-          )}
-        </form>
-      ) : (
-        <form className="stack" onSubmit={send}>
-          <input
-            className="import-box"
-            type="email"
-            required
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            aria-label="Email address"
-          />
-          <button className="btn primary" type="submit">
-            Send sign-in code
-          </button>
-          {err && (
-            <p className="note" role="status">
-              {err}
-            </p>
-          )}
-        </form>
-      )}
+      <p>
+        This device's code: <strong>{sync.code}</strong>{' '}
+        <button className="btn" onClick={copy} type="button">
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </p>
+      <p className="note" role="status">
+        {sync.status === 'syncing' ? 'Syncing…' : sync.status === 'error' ? 'Could not reach the sync server.' : 'Up to date.'}
+      </p>
+      <p>Setting up a new device? Enter the code shown on your other device here, and they'll sync:</p>
+      <form className="stack" onSubmit={link}>
+        <input
+          className="import-box"
+          type="text"
+          placeholder="Code from other device"
+          value={inputCode}
+          onChange={(e) => setInputCode(e.target.value)}
+          aria-label="Sync code from other device"
+        />
+        <button className="btn primary" type="submit">
+          Link this device
+        </button>
+      </form>
     </section>
   );
 }

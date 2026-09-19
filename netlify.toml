@@ -5,6 +5,9 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[functions]
+  directory = "netlify/functions"
+
 # Always fetch the service worker fresh so updates reach your phone
 [[headers]]
   for = "/sw.js"

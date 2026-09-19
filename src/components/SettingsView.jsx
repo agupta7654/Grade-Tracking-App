@@ -2,7 +2,77 @@ import { useState } from 'react';
 import { validBackup } from '../lib/store';
 import TopBar from './TopBar';
 
-export default function SettingsView({ data, replaceAll }) {
+function SyncSection({ sync }) {
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState('');
+
+  if (!sync.enabled) {
+    return (
+      <section className="block">
+        <h2 className="subhead">Sync across devices</h2>
+        <p>Sync isn't set up for this deploy yet.</p>
+      </section>
+    );
+  }
+
+  if (sync.user) {
+    return (
+      <section className="block">
+        <h2 className="subhead">Sync across devices</h2>
+        <p>
+          Signed in as {sync.user.email}.{' '}
+          {sync.status === 'syncing' ? 'Syncing…' : sync.status === 'error' ? 'Could not reach the sync server.' : 'Up to date.'}
+        </p>
+        <button className="btn" onClick={sync.signOut}>
+          Sign out
+        </button>
+      </section>
+    );
+  }
+
+  const send = async (e) => {
+    e.preventDefault();
+    setErr('');
+    const { error } = await sync.signIn(email.trim());
+    if (error) setErr(error.message);
+    else setSent(true);
+  };
+
+  return (
+    <section className="block">
+      <h2 className="subhead">Sync across devices</h2>
+      <p>Sign in with your email once on your phone and once on your laptop, and this data stays in sync between them.</p>
+      {sent ? (
+        <p className="note" role="status">
+          Check {email} for a sign-in link, and open it on this device.
+        </p>
+      ) : (
+        <form className="stack" onSubmit={send}>
+          <input
+            className="import-box"
+            type="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-label="Email address"
+          />
+          <button className="btn primary" type="submit">
+            Send sign-in link
+          </button>
+          {err && (
+            <p className="note" role="status">
+              {err}
+            </p>
+          )}
+        </form>
+      )}
+    </section>
+  );
+}
+
+export default function SettingsView({ data, replaceAll, sync }) {
   const [paste, setPaste] = useState('');
   const [msg, setMsg] = useState('');
 
@@ -58,10 +128,12 @@ export default function SettingsView({ data, replaceAll }) {
 
       <section className="block">
         <p>
-          Your courses and grades are stored only on this device. The Home Screen app and the browser keep separate copies, so enter
-          everything in the Home Screen app, and back it up here now and then.
+          Your courses and grades are stored on this device. Sign in below to keep them in sync with your other devices too — or use
+          the backup tools to move data over by hand.
         </p>
       </section>
+
+      <SyncSection sync={sync} />
 
       <section className="block">
         <h2 className="subhead">Save a backup</h2>
